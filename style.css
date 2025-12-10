@@ -1,0 +1,64 @@
+/* Gesamter App-Hintergrund */
+.stApp {
+    background-color: lightblue !important;
+}
+
+/* Inhaltcontainer */
+.block-container {
+    background: transparent;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+}
+
+/* Überschriften mit hellgrünem Hintergrund */
+.stApp h1,
+.stApp h2,
+.block-container h1,
+.block-container h2,
+.stMarkdown h1,
+.stMarkdown h2 {
+    background-color: lightgreen !important;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+/* Optional: Markdown-Absätze */
+.stMarkdown p {
+    color: #083a4a;
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: red !important;
+    color: white !important;
+    border-radius: 5px !important;
+    padding: 8px 16px !important;
+    border: none !important;
+    cursor: pointer;
+}
+
+/* Eingabefelder */
+.stTextInput > div > input,
+.stTextArea > div > textarea {
+    background-color: white !important;
+    color: black !important;
+    border: 1px solid gray !important;
+    padding: 6px !important;
+    border-radius: 4px !important;
+}
+
+/* Labels von Inputs */
+.stTextInput label,
+.stTextArea label {
+    color: #083a4a !important;
+}
+
+/* Sidebar Hintergrund und Überschriften */
+section[data-testid="stSidebar"] {
+    background: #e8f6ff !important;
+}
+section[data-testid="stSidebar"] h2 {
+    background-color: lightgreen !important;
+    padding: 6px 12px;
+    border-radius: 6px;
+}

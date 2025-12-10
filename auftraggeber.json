@@ -4,6 +4,26 @@
         "adresse": "Asterweg 32 35390 Giessen",
         "email": "flot@flo.de",
         "telefon": "0641 329837",
-        "auftragsart": "Schulreinigung"
+        "auftragsart": "Schulreinigung",
+        "id": 1,
+        "status": "offen"
+    },
+    {
+        "name": "Frau Moussa Aicha",
+        "adresse": "Fulderstraße 9 35390 Gießen",
+        "email": "Salgiess23@gmail.com",
+        "telefon": "01736483",
+        "auftragsart": "Alte Pflege",
+        "id": 2,
+        "status": "erledigt"
+    },
+    {
+        "name": "Wohnbau",
+        "adresse": "sami2 35908",
+        "email": "wohnbau@gmail.co",
+        "telefon": "064018765",
+        "auftragsart": "wir müssen ab 24.12.2025 die Lampe zu Wechseln. es soll inerhalb 2 Tage erledigt werden, nämlich bis 26.12.2025.",
+        "id": 3,
+        "status": "offen"
     }
 ]
