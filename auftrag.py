@@ -1,12 +1,9 @@
 import json
 import os
-
-# Pfad zur JSON-Datei (bitte bei Bedarf anpassen)
-import os
+from datetime import datetime
 
 # relativer Pfad zur JSON-Datei
 JSON_PATH = os.path.join(os.path.dirname(__file__), "auftraggeber.json")
-
 
 
 def _ensure_file_exists():
@@ -80,12 +77,13 @@ def add_auftraggeber(name, adresse, email, telefon, auftragsart):
 
 
 def markiere_als_erledigt(auftrag_id):
-    """Setzt den Status eines Auftrags auf 'erledigt'."""
+    """Setzt den Status eines Auftrags auf 'erledigt' und speichert Datum/Uhrzeit."""
     daten = load_data()
     updated = False
     for ag in daten:
         if ag.get("id") == auftrag_id:
             ag["status"] = "erledigt"
+            ag["erledigt_am"] = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
             updated = True
             break
     if updated:

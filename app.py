@@ -9,21 +9,20 @@ from auftrag import (
 )
 
 # Kopfzeile mit Titel links und Logo rechts
-col1, col2 = st.columns([4, 1])  # Verhältnis: mehr Platz für den Titel
+col1, col2 = st.columns([4, 1])
 with col1:
-    st.title("verwalte deine Auftäge")
+    st.title("verwalte deine Aufträge")
 with col2:
-    st.image("logo.png", width=120)  # Logo rechts oben, Breite anpassbar
+    st.image("logo.png", width=120)
 
-# Funktion zum Laden der CSS-Datei (optional und robust)
+# Funktion zum Laden der CSS-Datei (optional)
 def local_css(file_name):
     try:
         with open(file_name, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception:
-        pass  # CSS ist optional
+        pass
 
-# CSS einbinden
 local_css("style.css")
 
 st.title("📋 Auftraggeber Verwaltung")
@@ -66,18 +65,15 @@ st.header("Vorhandene Auftraggeber")
 data = load_data()
 
 if data:
-    # Optional: offene zuerst anzeigen
     data_sorted = sorted(data, key=lambda x: x.get("status") != "offen")
 
     for index, ag in enumerate(data_sorted, start=1):
-        ag_id = ag.get("id")  # durch Migration garantiert int
-        # Button zum Anzeigen/Verbergen der Details (eindeutiger Key)
+        ag_id = ag.get("id")
         name_btn_key = f"name_btn_{ag_id}"
         if st.button(f"{ag_id}. {ag['name']} ({ag.get('status','offen')})", key=name_btn_key):
             st.session_state.show_details[ag_id] = not st.session_state.show_details.get(ag_id, False)
             st.rerun()
 
-        # Details nur anzeigen, wenn toggled
         if st.session_state.show_details.get(ag_id, False):
             st.write(f"Adresse: {ag.get('adresse', '')}")
             st.write(f"E-Mail: {ag.get('email', '')}")
@@ -85,16 +81,17 @@ if data:
             st.write(f"Auftragsart: {ag.get('auftragsart', '')}")
             st.write(f"Status: {ag.get('status', 'offen')}")
 
+            if ag.get("status") == "erledigt":
+                st.write(f"➡️ wurde am {ag.get('erledigt_am', 'kein Datum gespeichert')} erledigt")
+
             cols = st.columns([1, 1, 2])
 
-            # Button: Auftrag erledigen (nur wenn offen)
             if ag.get("status") == "offen":
                 if cols[0].button("Erledigen", key=f"done_{ag_id}"):
                     markiere_als_erledigt(ag_id)
                     st.success(f"Auftrag von '{ag['name']}' wurde als erledigt markiert.")
                     st.rerun()
 
-            # Button: Löschen
             if cols[1].button("Löschen", key=f"delete_{ag_id}"):
                 delete_auftraggeber(ag_id)
                 st.warning(f"Auftraggeber '{ag['name']}' wurde gelöscht.")
@@ -117,6 +114,9 @@ if st.session_state.show_erledigte:
     erledigte = get_erledigte_auftraege()
     if erledigte:
         for e in erledigte:
+            datum = e.get("erledigt_am", "kein Datum gespeichert")
             st.write(f"{e['id']}. {e['name']} – {e['auftragsart']} (Status: {e['status']})")
+            st.write(f"➡️ wurde am {datum} erledigt")
+            st.write("---")
     else:
         st.info("Noch keine erledigten Aufträge vorhanden.")

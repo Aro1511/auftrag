@@ -6,16 +6,8 @@
         "telefon": "0641 329837",
         "auftragsart": "Schulreinigung",
         "id": 1,
-        "status": "offen"
-    },
-    {
-        "name": "Frau Moussa Aicha",
-        "adresse": "Fulderstraße 9 35390 Gießen",
-        "email": "Salgiess23@gmail.com",
-        "telefon": "01736483",
-        "auftragsart": "Alte Pflege",
-        "id": 2,
-        "status": "erledigt"
+        "status": "erledigt",
+        "erledigt_am": "12.12.2025 18:14:24"
     },
     {
         "name": "Wohnbau",
