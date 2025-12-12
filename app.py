@@ -8,6 +8,35 @@ from auftrag import (
     delete_auftraggeber,
 )
 
+# -------------------------------
+# Login mit Secrets
+# -------------------------------
+def login():
+    st.title("🔐 Login")
+
+    input_user = st.text_input("Benutzername")
+    input_pwd = st.text_input("Passwort", type="password")
+
+    if st.button("Login"):
+        if (
+            input_user == st.secrets["username"]
+            and input_pwd == st.secrets["password"]
+        ):
+            st.session_state["logged_in"] = True
+            st.success("Login erfolgreich ✅")
+            st.rerun()
+        else:
+            st.error("Falscher Benutzername oder Passwort ❌")
+
+# Falls noch nicht eingeloggt → Login anzeigen
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    login()
+    st.stop()  # beendet hier, App wird erst nach Login geladen
+
+# -------------------------------
+# Ab hier deine ursprüngliche App
+# -------------------------------
+
 # Kopfzeile mit Titel links und Logo rechts
 col1, col2 = st.columns([4, 1])
 with col1:
