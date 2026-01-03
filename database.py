@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from models import Auftraggeber
 
 # relativer Pfad zur JSON-Datei
 JSON_PATH = os.path.join(os.path.dirname(__file__), "auftraggeber.json")
@@ -33,12 +34,11 @@ def load_data():
 
     changed = False
     for item in data:
-        # id setzen, wenn fehlt oder ungültig
         if not isinstance(item.get("id"), int):
             item["id"] = next_id
             next_id += 1
             changed = True
-        # status default setzen
+
         if item.get("status") not in ("offen", "erledigt"):
             item["status"] = "offen"
             changed = True

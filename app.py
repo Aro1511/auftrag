@@ -1,7 +1,6 @@
 import streamlit as st
-from auftrag import (
+from database import (
     load_data,
-    save_data,
     add_auftraggeber,
     markiere_als_erledigt,
     get_erledigte_auftraege,
@@ -28,23 +27,24 @@ def login():
         else:
             st.error("Falscher Benutzername oder Passwort ❌")
 
+
 # Falls noch nicht eingeloggt → Login anzeigen
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()
-    st.stop()  # beendet hier, App wird erst nach Login geladen
+    st.stop()
 
 # -------------------------------
 # Ab hier deine ursprüngliche App
 # -------------------------------
 
-# Kopfzeile mit Titel links und Logo rechts
+# Kopfzeile
 col1, col2 = st.columns([4, 1])
 with col1:
     st.title("verwalte deine Aufträge")
 with col2:
     st.image("logo.png", width=120)
 
-# Funktion zum Laden der CSS-Datei (optional)
+# CSS laden
 def local_css(file_name):
     try:
         with open(file_name, "r", encoding="utf-8") as f:
@@ -96,9 +96,10 @@ data = load_data()
 if data:
     data_sorted = sorted(data, key=lambda x: x.get("status") != "offen")
 
-    for index, ag in enumerate(data_sorted, start=1):
+    for ag in data_sorted:
         ag_id = ag.get("id")
         name_btn_key = f"name_btn_{ag_id}"
+
         if st.button(f"{ag_id}. {ag['name']} ({ag.get('status','offen')})", key=name_btn_key):
             st.session_state.show_details[ag_id] = not st.session_state.show_details.get(ag_id, False)
             st.rerun()
@@ -134,7 +135,12 @@ else:
 # Abschnitt: Erledigte Aufträge
 st.header("Erledigte Aufträge")
 
-toggle_text = "Erledigte Aufträge anzeigen" if not st.session_state.show_erledigte else "Erledigte Aufträge ausblenden"
+toggle_text = (
+    "Erledigte Aufträge anzeigen"
+    if not st.session_state.show_erledigte
+    else "Erledigte Aufträge ausblenden"
+)
+
 if st.button(toggle_text, key="toggle_erledigte"):
     st.session_state.show_erledigte = not st.session_state.show_erledigte
     st.rerun()
