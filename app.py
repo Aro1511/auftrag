@@ -1,5 +1,5 @@
 import streamlit as st
-from database import (
+from firestore_database import (
     load_data,
     add_auftraggeber,
     markiere_als_erledigt,
@@ -27,7 +27,6 @@ def login():
         else:
             st.error("Falscher Benutzername oder Passwort ❌")
 
-
 # Falls noch nicht eingeloggt → Login anzeigen
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()
@@ -37,14 +36,12 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 # Ab hier deine ursprüngliche App
 # -------------------------------
 
-# Kopfzeile
 col1, col2 = st.columns([4, 1])
 with col1:
     st.title("verwalte deine Aufträge")
 with col2:
     st.image("logo.png", width=120)
 
-# CSS laden
 def local_css(file_name):
     try:
         with open(file_name, "r", encoding="utf-8") as f:
@@ -56,7 +53,6 @@ local_css("style.css")
 
 st.title("📋 Auftraggeber Verwaltung")
 
-# Session-State
 if "show_form" not in st.session_state:
     st.session_state.show_form = False
 if "show_details" not in st.session_state:
