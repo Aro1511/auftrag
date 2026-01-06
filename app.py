@@ -8,8 +8,9 @@ from firestore_database import (
 )
 from auth import show_login, logout
 from user_management import list_users, create_user, delete_user
-from logging_service import log_action   # ← NEU: Logging importieren
-from firebase_db import db               # ← NEU: Für Log-Anzeige im Adminbereich
+from logging_service import log_action
+from firebase_db import db
+import pandas as pd
 
 
 def local_css(file_name):
@@ -58,7 +59,6 @@ def show_auftraege_seite():
                 if all([name, adresse, email, telefon, auftragsart]):
                     add_auftraggeber(name, adresse, email, telefon, auftragsart)
 
-                    # Logging
                     log_action(
                         user=st.session_state["user"]["username"],
                         action="auftrag erstellt",
@@ -104,7 +104,6 @@ def show_auftraege_seite():
                     if cols[0].button("Erledigen", key=f"done_{ag_id}"):
                         markiere_als_erledigt(ag_id)
 
-                        # Logging
                         log_action(
                             user=st.session_state["user"]["username"],
                             action="auftrag erledigt",
@@ -117,7 +116,6 @@ def show_auftraege_seite():
                 if cols[1].button("Löschen", key=f"delete_{ag_id}"):
                     delete_auftraggeber(ag_id)
 
-                    # Logging
                     log_action(
                         user=st.session_state["user"]["username"],
                         action="auftrag gelöscht",
@@ -177,7 +175,6 @@ def show_admin_seite():
                 if cols[2].button("Löschen", key=f"del_user_{u['id']}"):
                     delete_user(u["id"])
 
-                    # Logging
                     log_action(
                         user=st.session_state["user"]["username"],
                         action="benutzer gelöscht",
@@ -200,7 +197,6 @@ def show_admin_seite():
             try:
                 create_user(new_username, new_password, role=role)
 
-                # Logging
                 log_action(
                     user=st.session_state["user"]["username"],
                     action="benutzer angelegt",
@@ -214,16 +210,57 @@ def show_admin_seite():
 
     st.subheader("📜 Aktivitätsprotokoll (Audit Log)")
 
-    logs = db.collection("logs").order_by("timestamp", direction="DESCENDING").limit(100).stream()
+    logs_ref = db.collection("logs").order_by("timestamp", direction="DESCENDING").stream()
+    logs_list = []
 
-    for log in logs:
+    for log in logs_ref:
         entry = log.to_dict()
-        st.write(
-            f"**{entry['timestamp']}** – "
-            f"**{entry['user']}** – "
-            f"{entry['action']} – "
-            f"{entry.get('details', '')}"
-        )
+        entry["id"] = log.id
+        logs_list.append(entry)
+
+    if logs_list:
+        df = pd.DataFrame(logs_list)
+
+        st.dataframe(df, use_container_width=True)
+
+        st.markdown("---")
+
+        st.write("### Einzelne Log-Einträge löschen")
+
+        for log in logs_list:
+            cols = st.columns([6, 1])
+            cols[0].write(
+                f"**{log['timestamp']}** – {log['user']} – {log['action']} – {log.get('details','')}"
+            )
+            if cols[1].button("❌", key=f"delete_log_{log['id']}"):
+                db.collection("logs").document(log["id"]).delete()
+
+                log_action(
+                    user=st.session_state["user"]["username"],
+                    action="log-eintrag gelöscht",
+                    details=f"log_id: {log['id']}"
+                )
+
+                st.warning("Ein Log-Eintrag wurde gelöscht.")
+                st.rerun()
+
+        st.markdown("---")
+
+        if st.button("⚠️ Gesamtes Aktivitätsprotokoll löschen"):
+            for log in logs_list:
+                db.collection("logs").document(log["id"]).delete()
+
+            log_action(
+                user=st.session_state["user"]["username"],
+                action="audit-log gelöscht",
+                details="komplettes Log entfernt"
+            )
+
+            st.warning("Das gesamte Aktivitätsprotokoll wurde gelöscht.")
+            st.rerun()
+
+    else:
+        st.info("Noch keine Log-Einträge vorhanden.")
 
 
 def main():
