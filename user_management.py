@@ -1,15 +1,18 @@
-from firebase_db import db
+from firebase_db import tenant_ref
 from utils import hash_password
-from logging_service import log_action   # ← NEU: Logging importieren
-import streamlit as st                   # ← NEU: Für Zugriff auf eingeloggten User
 
 
 USERS_COLLECTION = "users"
 
 
+def _users_collection():
+    """Users-Collection im aktuellen Tenant."""
+    return tenant_ref().collection(USERS_COLLECTION)
+
+
 def get_user_by_username(username: str):
-    """Hole einen Nutzer anhand des Usernamens."""
-    users_ref = db.collection(USERS_COLLECTION)
+    """Hole einen Nutzer anhand des Usernamens (im aktuellen Tenant)."""
+    users_ref = _users_collection()
     query = users_ref.where("username", "==", username).limit(1).stream()
 
     for doc in query:
@@ -21,8 +24,8 @@ def get_user_by_username(username: str):
 
 
 def list_users():
-    """Alle Nutzer auflisten."""
-    users_ref = db.collection(USERS_COLLECTION)
+    """Alle Nutzer im aktuellen Tenant auflisten."""
+    users_ref = _users_collection()
     docs = users_ref.stream()
     users = []
 
@@ -35,10 +38,9 @@ def list_users():
 
 
 def create_user(username: str, password: str, role: str = "user"):
-    """Neuen Nutzer anlegen."""
-    users_ref = db.collection(USERS_COLLECTION)
+    """Neuen Nutzer im aktuellen Tenant anlegen."""
+    users_ref = _users_collection()
 
-    # Prüfen, ob Username schon existiert
     if get_user_by_username(username):
         raise ValueError("Benutzername existiert bereits.")
 
@@ -48,39 +50,14 @@ def create_user(username: str, password: str, role: str = "user"):
     user_data = {
         "username": username,
         "password_hash": password_hash,
-        "role": role,  # "admin" oder "user"
+        "role": role,
     }
     doc_ref.set(user_data)
 
     user_data["id"] = doc_ref.id
-
-    # Logging
-    if "user" in st.session_state:
-        log_action(
-            user=st.session_state["user"]["username"],
-            action="benutzer angelegt",
-            details=f"username: {username}, role: {role}"
-        )
-
     return user_data
 
 
 def delete_user(user_id: str):
-    """Nutzer löschen."""
-    # Nutzer-Daten vorher holen (für Logging)
-    user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
-    deleted_username = None
-
-    if user_doc.exists:
-        deleted_username = user_doc.to_dict().get("username", "unbekannt")
-
-    # Löschen
-    db.collection(USERS_COLLECTION).document(user_id).delete()
-
-    # Logging
-    if "user" in st.session_state:
-        log_action(
-            user=st.session_state["user"]["username"],
-            action="benutzer gelöscht",
-            details=f"username: {deleted_username}"
-        )
+    """Nutzer im aktuellen Tenant löschen."""
+    _users_collection().document(user_id).delete()

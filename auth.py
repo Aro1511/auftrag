@@ -1,64 +1,37 @@
 import streamlit as st
 from firebase_db import db
-from user_management import get_user_by_username, create_user, list_users
+from user_management import get_user_by_username
 from utils import check_password
-from logging_service import log_action   # ← NEU: Logging importieren
+from logging_service import log_action
 
 
-def _has_any_user():
-    """Prüfen, ob es bereits Nutzer gibt."""
-    users = list_users()
-    return len(users) > 0
+def _login_tenant():
+    st.subheader("Mandanten-Login")
 
-
-def _create_initial_admin():
-    st.title("👑 Ersten Admin anlegen")
-
-    st.info("Es wurde noch kein Benutzer gefunden. Lege jetzt den ersten Admin-Zugang an.")
-
-    username = st.text_input("Admin Benutzername")
-    password = st.text_input("Admin Passwort", type="password")
-    password_confirm = st.text_input("Passwort wiederholen", type="password")
-
-    if st.button("Admin anlegen"):
-        if not username or not password or not password_confirm:
-            st.error("Bitte alle Felder ausfüllen.")
-            return
-
-        if password != password_confirm:
-            st.error("Passwörter stimmen nicht überein.")
-            return
-
-        try:
-            user = create_user(username, password, role="admin")
-
-            # Logging
-            log_action(
-                user=username,
-                action="admin erstellt (initial setup)",
-                details=f"username: {username}"
-            )
-
-            st.success(f"Admin '{user['username']}' wurde angelegt. Du kannst dich jetzt einloggen.")
-            st.session_state["setup_done"] = True
-            st.rerun()
-        except ValueError as e:
-            st.error(str(e))
-
-
-def show_login():
-    """Login-UI anzeigen und Session setzen."""
-    # Falls noch keine Nutzer existieren → Setup für ersten Admin
-    if not _has_any_user() and not st.session_state.get("setup_done"):
-        _create_initial_admin()
-        return
-
-    st.title("🔐 Login")
-
+    tenant_id = st.text_input("Kunden-ID (Tenant-ID)")
     username = st.text_input("Benutzername")
     password = st.text_input("Passwort", type="password")
 
-    if st.button("Login"):
+    if st.button("Einloggen als Mandant"):
+        if not tenant_id or not username or not password:
+            st.error("Bitte alle Felder ausfüllen.")
+            return
+
+        # Tenant prüfen
+        tenant_doc = db.collection("tenants").document(tenant_id).get()
+        if not tenant_doc.exists:
+            st.error("Unbekannte Kunden-ID (Tenant-ID).")
+            return
+
+        tenant_data = tenant_doc.to_dict()
+        if not tenant_data.get("active", True):
+            st.error("Dieser Mandant ist deaktiviert. Bitte Vermieter kontaktieren.")
+            return
+
+        # tenant_id in Session speichern
+        st.session_state["tenant_id"] = tenant_id.strip()
+
+        # Benutzer im entsprechenden Tenant suchen
         user = get_user_by_username(username)
         if not user:
             st.error("Benutzer existiert nicht.")
@@ -68,32 +41,89 @@ def show_login():
             st.error("Falsches Passwort.")
             return
 
-        # Logging
+        # Logging im Tenant
         log_action(
             user=username,
             action="login"
         )
 
-        # User in Session speichern
         st.session_state["user"] = {
             "id": user["id"],
             "username": user["username"],
-            "role": user["role"],
+            "role": user.get("role", "user"),
+            "type": "tenant",
         }
         st.success(f"Willkommen, {user['username']}!")
         st.rerun()
 
 
+def _login_superadmin():
+    st.subheader("Superadmin-Login")
+
+    superadmin_id = st.text_input("Superadmin-ID")
+    username = st.text_input("Superadmin-Benutzername")
+    password = st.text_input("Superadmin-Passwort", type="password")
+
+    if st.button("Einloggen als Superadmin"):
+        if not superadmin_id or not username or not password:
+            st.error("Bitte alle Felder ausfüllen.")
+            return
+
+        users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
+        query = users_ref.where("username", "==", username).limit(1).stream()
+
+        admin_user = None
+        for doc in query:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            admin_user = data
+            break
+
+        if not admin_user:
+            st.error("Superadmin-Benutzer existiert nicht oder falsche Superadmin-ID.")
+            return
+
+        if not check_password(password, admin_user["password_hash"]):
+            st.error("Falsches Passwort.")
+            return
+
+        st.session_state["user"] = {
+            "id": admin_user["id"],
+            "username": admin_user["username"],
+            "role": "superadmin",
+            "superadmin_id": superadmin_id,
+            "type": "superadmin",
+        }
+        st.success(f"Superadmin '{admin_user['username']}' eingeloggt.")
+        st.rerun()
+
+
+def show_login():
+    """Login-UI anzeigen und Session setzen."""
+    st.title("🔐 Login")
+
+    tab_tenant, tab_superadmin = st.tabs(["Mandant", "Superadmin"])
+
+    with tab_tenant:
+        _login_tenant()
+
+    with tab_superadmin:
+        _login_superadmin()
+
+
 def logout():
     """User ausloggen."""
     if "user" in st.session_state:
-
-        # Logging
-        log_action(
-            user=st.session_state["user"]["username"],
-            action="logout"
-        )
-
+        user = st.session_state["user"]
+        if user.get("type") == "tenant":
+            # Logging nur für Mandanten
+            log_action(
+                user=user["username"],
+                action="logout"
+            )
         del st.session_state["user"]
+
+    if "tenant_id" in st.session_state:
+        del st.session_state["tenant_id"]
 
     st.rerun()

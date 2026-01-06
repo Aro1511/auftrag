@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+
 from firestore_database import (
     load_data,
     add_auftraggeber,
@@ -9,8 +11,8 @@ from firestore_database import (
 from auth import show_login, logout
 from user_management import list_users, create_user, delete_user
 from logging_service import log_action
-from firebase_db import db
-import pandas as pd
+from firebase_db import tenant_ref
+from superadmin import show_superadmin_dashboard
 
 
 def local_css(file_name):
@@ -200,7 +202,7 @@ def show_admin_seite():
                 log_action(
                     user=st.session_state["user"]["username"],
                     action="benutzer angelegt",
-                    details=f"username: {new_username}"
+                    details=f"username: {new_username}, role: {role}"
                 )
 
                 st.success(f"Benutzer '{new_username}' wurde als {role} angelegt.")
@@ -210,7 +212,7 @@ def show_admin_seite():
 
     st.subheader("📜 Aktivitätsprotokoll (Audit Log)")
 
-    logs_ref = db.collection("logs").order_by("timestamp", direction="DESCENDING").stream()
+    logs_ref = tenant_ref().collection("logs").order_by("timestamp", direction="DESCENDING").stream()
     logs_list = []
 
     for log in logs_ref:
@@ -220,7 +222,6 @@ def show_admin_seite():
 
     if logs_list:
         df = pd.DataFrame(logs_list)
-
         st.dataframe(df, use_container_width=True)
 
         st.markdown("---")
@@ -233,7 +234,7 @@ def show_admin_seite():
                 f"**{log['timestamp']}** – {log['user']} – {log['action']} – {log.get('details','')}"
             )
             if cols[1].button("❌", key=f"delete_log_{log['id']}"):
-                db.collection("logs").document(log["id"]).delete()
+                tenant_ref().collection("logs").document(log["id"]).delete()
 
                 log_action(
                     user=st.session_state["user"]["username"],
@@ -248,7 +249,7 @@ def show_admin_seite():
 
         if st.button("⚠️ Gesamtes Aktivitätsprotokoll löschen"):
             for log in logs_list:
-                db.collection("logs").document(log["id"]).delete()
+                tenant_ref().collection("logs").document(log["id"]).delete()
 
             log_action(
                 user=st.session_state["user"]["username"],
@@ -272,9 +273,23 @@ def main():
 
     user = st.session_state["user"]
 
+    # Superadmin-Ansicht
+    if user.get("type") == "superadmin":
+        with st.sidebar:
+            st.markdown(f"**Eingeloggt als Superadmin:** {user['username']}")
+            st.markdown(f"**Superadmin-ID:** {user.get('superadmin_id', '-')}")
+            st.markdown("---")
+            if st.button("Logout"):
+                logout()
+        show_superadmin_dashboard()
+        return
+
+    # Mandanten-Ansicht
     with st.sidebar:
         st.markdown(f"**Eingeloggt als:** {user['username']}")
         st.markdown(f"**Rolle:** {user['role']}")
+        st.markdown(f"**Kunden-ID:** {st.session_state.get('tenant_id', '-')}")
+        st.markdown("---")
 
         if st.button("Logout"):
             logout()

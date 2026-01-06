@@ -1,32 +1,39 @@
 from datetime import datetime
-from firebase_db import db
 import streamlit as st
+from firebase_db import tenant_ref
 
-COLLECTION = "auftraggeber"
+
+def _auftraege_collection():
+    """Collection-Referenz für Aufträge im aktuellen Tenant."""
+    return tenant_ref().collection("auftraggeber")
 
 
 def load_data():
-    """Aufträge laden – Nutzer sieht eigene, Admin sieht alle."""
+    """Aufträge laden – immer nur innerhalb des eigenen Tenants."""
     user = st.session_state.get("user")
     if not user:
         return []
 
+    auftraege_ref = _auftraege_collection()
+
     if user["role"] == "admin":
-        docs = db.collection(COLLECTION).stream()
+        docs = auftraege_ref.stream()
     else:
-        docs = db.collection(COLLECTION).where("user_id", "==", user["id"]).stream()
+        docs = auftraege_ref.where("user_id", "==", user["id"]).stream()
 
     return [doc.to_dict() for doc in docs]
 
 
 def add_auftraggeber(name, adresse, email, telefon, auftragsart):
-    """Neuen Auftraggeber für aktuellen Nutzer speichern."""
+    """Neuen Auftraggeber im aktuellen Tenant speichern."""
     user = st.session_state.get("user")
     if not user:
         return
 
-    # IDs aus allen Aufträgen (global) bestimmen
-    docs = db.collection(COLLECTION).stream()
+    auftraege_ref = _auftraege_collection()
+
+    # IDs tenant-intern bestimmen
+    docs = auftraege_ref.stream()
     ids = []
     for d in docs:
         data = d.to_dict()
@@ -35,10 +42,10 @@ def add_auftraggeber(name, adresse, email, telefon, auftragsart):
 
     next_id = (max(ids) + 1) if ids else 1
 
-    doc_ref = db.collection(COLLECTION).document(str(next_id))
+    doc_ref = auftraege_ref.document(str(next_id))
     doc_ref.set({
         "id": next_id,
-        "user_id": user["id"],  # Zuordnung zum Nutzer
+        "user_id": user["id"],
         "name": name,
         "adresse": adresse,
         "email": email,
@@ -50,7 +57,8 @@ def add_auftraggeber(name, adresse, email, telefon, auftragsart):
 
 
 def markiere_als_erledigt(auftrag_id):
-    doc_ref = db.collection(COLLECTION).document(str(auftrag_id))
+    auftraege_ref = _auftraege_collection()
+    doc_ref = auftraege_ref.document(str(auftrag_id))
     doc_ref.update({
         "status": "erledigt",
         "erledigt_am": datetime.now().strftime("%d.%m.%Y %H:%M:%S")
@@ -58,20 +66,23 @@ def markiere_als_erledigt(auftrag_id):
 
 
 def delete_auftraggeber(auftrag_id):
-    db.collection(COLLECTION).document(str(auftrag_id)).delete()
+    auftraege_ref = _auftraege_collection()
+    auftraege_ref.document(str(auftrag_id)).delete()
 
 
 def get_erledigte_auftraege():
-    """Erledigte Aufträge – wieder nach Rolle filtern."""
+    """Erledigte Aufträge – tenant-intern nach Rolle gefiltert."""
     user = st.session_state.get("user")
     if not user:
         return []
 
+    auftraege_ref = _auftraege_collection()
+
     if user["role"] == "admin":
-        docs = db.collection(COLLECTION).where("status", "==", "erledigt").stream()
+        docs = auftraege_ref.where("status", "==", "erledigt").stream()
     else:
         docs = (
-            db.collection(COLLECTION)
+            auftraege_ref
             .where("status", "==", "erledigt")
             .where("user_id", "==", user["id"])
             .stream()
