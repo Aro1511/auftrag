@@ -3,5 +3,7 @@ google-cloud-firestore
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
+google-cloud-core
 protobuf
 pytz
+bcrypt

@@ -1,11 +1,9 @@
-import hashlib
-
+import bcrypt
 
 def hash_password(password: str) -> str:
-    """Erzeugt einen SHA-256 Hash aus dem Passwort."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
+    """Erzeugt einen bcrypt-Hash aus dem Passwort."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def check_password(password: str, password_hash: str) -> bool:
-    """Vergleicht Klartext-Passwort mit gespeichertem Hash."""
-    return hash_password(password) == password_hash
+    """Vergleicht Klartext-Passwort mit gespeichertem bcrypt-Hash."""
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
