@@ -6,4 +6,4 @@ google-auth-httplib2
 google-cloud-core
 protobuf
 pytz
-bcrypt
+passlib[bcrypt]
