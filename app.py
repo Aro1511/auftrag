@@ -8,6 +8,8 @@ from firestore_database import (
 )
 from auth import show_login, logout
 from user_management import list_users, create_user, delete_user
+from logging_service import log_action   # ← NEU: Logging importieren
+from firebase_db import db               # ← NEU: Für Log-Anzeige im Adminbereich
 
 
 def local_css(file_name):
@@ -55,6 +57,14 @@ def show_auftraege_seite():
             if submitted:
                 if all([name, adresse, email, telefon, auftragsart]):
                     add_auftraggeber(name, adresse, email, telefon, auftragsart)
+
+                    # Logging
+                    log_action(
+                        user=st.session_state["user"]["username"],
+                        action="auftrag erstellt",
+                        details=f"name: {name}"
+                    )
+
                     st.success(f"Auftraggeber '{name}' wurde gespeichert!")
                     st.session_state.show_form = False
                     st.rerun()
@@ -93,11 +103,27 @@ def show_auftraege_seite():
                 if ag.get("status") == "offen":
                     if cols[0].button("Erledigen", key=f"done_{ag_id}"):
                         markiere_als_erledigt(ag_id)
+
+                        # Logging
+                        log_action(
+                            user=st.session_state["user"]["username"],
+                            action="auftrag erledigt",
+                            details=f"ID {ag_id}"
+                        )
+
                         st.success(f"Auftrag von '{ag['name']}' wurde als erledigt markiert.")
                         st.rerun()
 
                 if cols[1].button("Löschen", key=f"delete_{ag_id}"):
                     delete_auftraggeber(ag_id)
+
+                    # Logging
+                    log_action(
+                        user=st.session_state["user"]["username"],
+                        action="auftrag gelöscht",
+                        details=f"ID {ag_id}"
+                    )
+
                     st.warning(f"Auftraggeber '{ag['name']}' wurde gelöscht.")
                     st.session_state.show_details.pop(ag_id, None)
                     st.rerun()
@@ -144,13 +170,20 @@ def show_admin_seite():
             cols[0].write(f"**{u['username']}**")
             cols[1].write(f"Rolle: {u.get('role', 'user')}")
 
-            # aktuellen eingeloggten User nicht selbst löschen lassen
             current_user = st.session_state.get("user")
             if current_user and current_user["id"] == u["id"]:
                 cols[2].write("Aktuell eingeloggt")
             else:
                 if cols[2].button("Löschen", key=f"del_user_{u['id']}"):
                     delete_user(u["id"])
+
+                    # Logging
+                    log_action(
+                        user=st.session_state["user"]["username"],
+                        action="benutzer gelöscht",
+                        details=f"username: {u['username']}"
+                    )
+
                     st.warning(f"Benutzer '{u['username']}' wurde gelöscht.")
                     st.rerun()
 
@@ -166,23 +199,42 @@ def show_admin_seite():
         else:
             try:
                 create_user(new_username, new_password, role=role)
+
+                # Logging
+                log_action(
+                    user=st.session_state["user"]["username"],
+                    action="benutzer angelegt",
+                    details=f"username: {new_username}"
+                )
+
                 st.success(f"Benutzer '{new_username}' wurde als {role} angelegt.")
                 st.rerun()
             except ValueError as e:
                 st.error(str(e))
 
+    st.subheader("📜 Aktivitätsprotokoll (Audit Log)")
+
+    logs = db.collection("logs").order_by("timestamp", direction="DESCENDING").limit(100).stream()
+
+    for log in logs:
+        entry = log.to_dict()
+        st.write(
+            f"**{entry['timestamp']}** – "
+            f"**{entry['user']}** – "
+            f"{entry['action']} – "
+            f"{entry.get('details', '')}"
+        )
+
 
 def main():
     st.set_page_config(page_title="Auftragsverwaltung", page_icon="📋", layout="wide")
 
-    # Login prüfen
     if "user" not in st.session_state:
         show_login()
         return
 
     user = st.session_state["user"]
 
-    # Sidebar: User-Info & Navigation
     with st.sidebar:
         st.markdown(f"**Eingeloggt als:** {user['username']}")
         st.markdown(f"**Rolle:** {user['role']}")

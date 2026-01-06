@@ -1,5 +1,7 @@
 from firebase_db import db
 from utils import hash_password
+from logging_service import log_action   # ← NEU: Logging importieren
+import streamlit as st                   # ← NEU: Für Zugriff auf eingeloggten User
 
 
 USERS_COLLECTION = "users"
@@ -51,9 +53,34 @@ def create_user(username: str, password: str, role: str = "user"):
     doc_ref.set(user_data)
 
     user_data["id"] = doc_ref.id
+
+    # Logging
+    if "user" in st.session_state:
+        log_action(
+            user=st.session_state["user"]["username"],
+            action="benutzer angelegt",
+            details=f"username: {username}, role: {role}"
+        )
+
     return user_data
 
 
 def delete_user(user_id: str):
     """Nutzer löschen."""
+    # Nutzer-Daten vorher holen (für Logging)
+    user_doc = db.collection(USERS_COLLECTION).document(user_id).get()
+    deleted_username = None
+
+    if user_doc.exists:
+        deleted_username = user_doc.to_dict().get("username", "unbekannt")
+
+    # Löschen
     db.collection(USERS_COLLECTION).document(user_id).delete()
+
+    # Logging
+    if "user" in st.session_state:
+        log_action(
+            user=st.session_state["user"]["username"],
+            action="benutzer gelöscht",
+            details=f"username: {deleted_username}"
+        )

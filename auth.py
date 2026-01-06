@@ -2,6 +2,7 @@ import streamlit as st
 from firebase_db import db
 from user_management import get_user_by_username, create_user, list_users
 from utils import check_password
+from logging_service import log_action   # ← NEU: Logging importieren
 
 
 def _has_any_user():
@@ -30,6 +31,14 @@ def _create_initial_admin():
 
         try:
             user = create_user(username, password, role="admin")
+
+            # Logging
+            log_action(
+                user=username,
+                action="admin erstellt (initial setup)",
+                details=f"username: {username}"
+            )
+
             st.success(f"Admin '{user['username']}' wurde angelegt. Du kannst dich jetzt einloggen.")
             st.session_state["setup_done"] = True
             st.rerun()
@@ -59,6 +68,12 @@ def show_login():
             st.error("Falsches Passwort.")
             return
 
+        # Logging
+        log_action(
+            user=username,
+            action="login"
+        )
+
         # User in Session speichern
         st.session_state["user"] = {
             "id": user["id"],
@@ -72,5 +87,13 @@ def show_login():
 def logout():
     """User ausloggen."""
     if "user" in st.session_state:
+
+        # Logging
+        log_action(
+            user=st.session_state["user"]["username"],
+            action="logout"
+        )
+
         del st.session_state["user"]
+
     st.rerun()
