@@ -13,7 +13,7 @@ def ensure_superadmin_exists():
     username = "admin@abdi.de"
 
     # Richtiger SHA-256 Hash für Passwort "inaosman"
-    password_hash = "8a2f0f1e4a0d3b1c3d8e5f7a9b0c1d2e3f4a5b6c7d8e9f001122334455667788"
+    password_hash = "c3fcd3d76192e4007dfb496cca67e13b"
 
     # Prüfen, ob superadmins/id1/users existiert
     users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
