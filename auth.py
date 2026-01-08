@@ -6,28 +6,25 @@ from logging_service import log_action
 
 
 # ---------------------------------------------------------
-# AUTOMATISCHEN SUPERADMIN ERSTELLEN
+# AUTOMATISCHEN SUPERADMIN ERSTELLEN (NEUE VERSION)
 # ---------------------------------------------------------
 def ensure_superadmin_exists():
     superadmin_id = "id1"
     username = "admin@abdi.de"
 
-    # Richtiger SHA-256 Hash für Passwort "inaosman"
+    # SHA-256 Hash für Passwort "inaosman"
     password_hash = "f3efebc1866b910a6f87229ea365a64463c1377404d341e8587b397d4b5daf6c"
 
-    # Prüfen, ob superadmins/id1/users existiert
+    # Fester Dokumentname, damit der Eintrag IMMER überschrieben wird
     users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
-    existing = list(users_ref.where("username", "==", username).limit(1).stream())
+    admin_doc_ref = users_ref.document("admin_user")
 
-    if existing:
-        return  # Superadmin existiert bereits
-
-    # Superadmin automatisch erstellen
-    users_ref.add({
+    # Superadmin immer setzen/überschreiben
+    admin_doc_ref.set({
         "username": username,
         "password_hash": password_hash,
-        "role": "superadmin"
-    })
+        "role": "superadmin",
+    }, merge=True)
 
 
 # ---------------------------------------------------------
@@ -45,7 +42,6 @@ def _login_tenant():
             st.error("Bitte alle Felder ausfüllen.")
             return
 
-        # Tenant prüfen
         tenant_doc = db.collection("tenants").document(tenant_id).get()
         if not tenant_doc.exists:
             st.error("Unbekannte Kunden-ID (Tenant-ID).")
@@ -53,13 +49,11 @@ def _login_tenant():
 
         tenant_data = tenant_doc.to_dict()
         if not tenant_data.get("active", True):
-            st.error("Dieser Mandant ist deaktiviert. Bitte Vermieter kontaktieren.")
+            st.error("Dieser Mandant ist deaktiviert.")
             return
 
-        # tenant_id in Session speichern
         st.session_state["tenant_id"] = tenant_id.strip()
 
-        # Benutzer im entsprechenden Tenant suchen
         user = get_user_by_username(username)
         if not user:
             st.error("Benutzer existiert nicht.")
@@ -69,11 +63,7 @@ def _login_tenant():
             st.error("Falsches Passwort.")
             return
 
-        # Logging im Tenant
-        log_action(
-            user=username,
-            action="login"
-        )
+        log_action(user=username, action="login")
 
         st.session_state["user"] = {
             "id": user["id"],
@@ -81,7 +71,8 @@ def _login_tenant():
             "role": user.get("role", "user"),
             "type": "tenant",
         }
-        st.success(f"Willkommen, {user['username']}!")
+
+        st.success(f"Willkommen, {user['username']}")
         st.rerun()
 
 
@@ -111,7 +102,7 @@ def _login_superadmin():
             break
 
         if not admin_user:
-            st.error("Superadmin-Benutzer existiert nicht oder falsche Superadmin-ID.")
+            st.error("Superadmin existiert nicht oder falsche ID.")
             return
 
         if not check_password(password, admin_user["password_hash"]):
@@ -125,7 +116,8 @@ def _login_superadmin():
             "superadmin_id": superadmin_id,
             "type": "superadmin",
         }
-        st.success(f"Superadmin '{admin_user['username']}' eingeloggt.")
+
+        st.success(f"Superadmin {admin_user['username']} eingeloggt.")
         st.rerun()
 
 
@@ -133,10 +125,9 @@ def _login_superadmin():
 # LOGIN-SEITE
 # ---------------------------------------------------------
 def show_login():
-    """Login-UI anzeigen und Session setzen."""
-    st.title("🔐 Login")
+    st.title("Login")
 
-    # AUTOMATISCHEN SUPERADMIN ERSTELLEN
+    # Superadmin wird immer korrekt erstellt
     ensure_superadmin_exists()
 
     tab_tenant, tab_superadmin = st.tabs(["Mandant", "Superadmin"])
@@ -152,15 +143,12 @@ def show_login():
 # LOGOUT
 # ---------------------------------------------------------
 def logout():
-    """User ausloggen."""
     if "user" in st.session_state:
         user = st.session_state["user"]
+
         if user.get("type") == "tenant":
-            # Logging nur für Mandanten
-            log_action(
-                user=user["username"],
-                action="logout"
-            )
+            log_action(user=user["username"], action="logout")
+
         del st.session_state["user"]
 
     if "tenant_id" in st.session_state:
