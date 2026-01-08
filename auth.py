@@ -5,6 +5,32 @@ from utils import check_password
 from logging_service import log_action
 
 
+# ---------------------------------------------------------
+# AUTOMATISCHEN SUPERADMIN ERSTELLEN (LÖSUNG 2)
+# ---------------------------------------------------------
+def ensure_superadmin_exists():
+    superadmin_id = "id1"
+    username = "admin@abdi.de"
+    password_hash = "$2a$12$JewCE769.FsKvKorDtJsTOxKvjyC8lNtFJWl66O7AKEtDQL/wlXMi"
+
+    # Prüfen, ob superadmins/id1/users existiert
+    users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
+    existing = list(users_ref.where("username", "==", username).limit(1).stream())
+
+    if existing:
+        return  # Superadmin existiert bereits
+
+    # Superadmin automatisch erstellen
+    users_ref.add({
+        "username": username,
+        "password_hash": password_hash,
+        "role": "superadmin"
+    })
+
+
+# ---------------------------------------------------------
+# MANDANTEN-LOGIN
+# ---------------------------------------------------------
 def _login_tenant():
     st.subheader("Mandanten-Login")
 
@@ -57,6 +83,9 @@ def _login_tenant():
         st.rerun()
 
 
+# ---------------------------------------------------------
+# SUPERADMIN-LOGIN
+# ---------------------------------------------------------
 def _login_superadmin():
     st.subheader("Superadmin-Login")
 
@@ -98,9 +127,15 @@ def _login_superadmin():
         st.rerun()
 
 
+# ---------------------------------------------------------
+# LOGIN-SEITE
+# ---------------------------------------------------------
 def show_login():
     """Login-UI anzeigen und Session setzen."""
     st.title("🔐 Login")
+
+    # AUTOMATISCHEN SUPERADMIN ERSTELLEN
+    ensure_superadmin_exists()
 
     tab_tenant, tab_superadmin = st.tabs(["Mandant", "Superadmin"])
 
@@ -111,6 +146,9 @@ def show_login():
         _login_superadmin()
 
 
+# ---------------------------------------------------------
+# LOGOUT
+# ---------------------------------------------------------
 def logout():
     """User ausloggen."""
     if "user" in st.session_state:
