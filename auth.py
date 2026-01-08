@@ -6,14 +6,14 @@ from logging_service import log_action
 
 
 # ---------------------------------------------------------
-# AUTOMATISCHEN SUPERADMIN ERSTELLEN (LÖSUNG 2)
+# AUTOMATISCHEN SUPERADMIN ERSTELLEN
 # ---------------------------------------------------------
 def ensure_superadmin_exists():
     superadmin_id = "id1"
     username = "admin@abdi.de"
 
     # Richtiger SHA-256 Hash für Passwort "inaosman"
-    password_hash = "c3fcd3d76192e4007dfb496cca67e13b"
+    password_hash = "f3efebc1866b910a6f87229ea365a64463c1377404d341e8587b397d4b5daf6c"
 
     # Prüfen, ob superadmins/id1/users existiert
     users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
