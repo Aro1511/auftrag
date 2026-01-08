@@ -11,7 +11,9 @@ from logging_service import log_action
 def ensure_superadmin_exists():
     superadmin_id = "id1"
     username = "admin@abdi.de"
-    password_hash = "$2a$12$JewCE769.FsKvKorDtJsTOxKvjyC8lNtFJWl66O7AKEtDQL/wlXMi"
+
+    # Neuer SHA-256 Hash für Passwort "inaosman"
+    password_hash = "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2"
 
     # Prüfen, ob superadmins/id1/users existiert
     users_ref = db.collection("superadmins").document(superadmin_id).collection("users")
